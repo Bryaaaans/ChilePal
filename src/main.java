@@ -1,6 +1,10 @@
+import controller.ChilePalController;
+import view.ConsolaView;
+
 public class main {
     public static void main (String[]arg) {
-
-        System.out.println("hola mundo");
+        ChilePalController controller = new ChilePalController();
+        ConsolaView view = new ConsolaView(controller);
+        view.iniciar();
     }
 }
