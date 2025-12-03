@@ -6,5 +6,6 @@ public class main {
         ChilePalController controller = new ChilePalController();
         ConsolaView view = new ConsolaView(controller);
         view.iniciar();
+
     }
 }
