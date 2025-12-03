@@ -151,6 +151,97 @@ public class ConsolaView {
     // PEDIDOS.
 
     private void menuPedidos() {
-        System.out.println("\n--- Menú Pedidos ---");
+            int opcion;
+            do {
+                System.out.println("\n--- Menú Pedidos ---");
+                System.out.println("1. Registrar pedido");
+                System.out.println("2. Listar pedidos");
+                System.out.println("3. Volver");
+
+                opcion = scanner.nextInt();
+
+                switch (opcion) {
+                    case 1 -> registrarPedido();
+                    case 2 -> listarPedidos();
+                    case 3 -> System.out.println("Volviendo...");
+                    default -> System.out.println("Opción inválida.");
+                }
+
+            } while (opcion != 3);
+
     }
+    private void registrarPedido() {
+        System.out.println("\n-- Registrar Pedido --");
+
+        // 1) Mostrar clientes
+        List<Cliente> clientes = controller.obtenerClientes();
+        if (clientes.isEmpty()) {
+            System.out.println("No hay clientes registrados. Crea uno primero.");
+            return;
+        }
+
+        System.out.println("Clientes disponibles:");
+        for (Cliente c : clientes) {
+            System.out.println(c.getId() + " - " + c.getNombre());
+        }
+
+        System.out.print("ID cliente: ");
+        int idCliente = scanner.nextInt();
+        Cliente cliente = controller.buscarClientePorId(idCliente);
+
+        if (cliente == null) {
+            System.out.println("Cliente no encontrado.");
+            return;
+        }
+
+        // 2) Mostrar productos
+        List<Producto> productos = controller.obtenerProductos();
+        if (productos.isEmpty()) {
+            System.out.println("No hay productos registrados. Crea uno primero.");
+            return;
+        }
+
+        System.out.println("Productos disponibles:");
+        for (Producto p : productos) {
+            System.out.println(p.getId() + " - " + p.getNombre() +
+                    " (precio: " + p.getPrecioNeto() + ", stock: " + p.getStock() + ")");
+        }
+
+        System.out.print("ID producto: ");
+        int idProducto = scanner.nextInt();
+        Producto producto = controller.buscarProductoPorId(idProducto);
+
+        if (producto == null) {
+            System.out.println("Producto no encontrado.");
+            return;
+        }
+
+        // 3) Cantidad
+        System.out.print("Cantidad: ");
+        int cantidad = scanner.nextInt();
+
+        // 4) Registrar en el controlador
+        var pedido = controller.registrarPedido(cliente, producto, cantidad);
+
+        if (pedido == null) {
+            System.out.println("No se pudo crear el pedido (stock insuficiente).");
+        } else {
+            System.out.println("Pedido creado: " + pedido);
+        }
+    }
+    private void listarPedidos() {
+        System.out.println("\n-- Lista de Pedidos --");
+        var pedidos = controller.obtenerPedidos();
+
+        if (pedidos.isEmpty()) {
+            System.out.println("No hay pedidos registrados.");
+            return;
+        }
+
+        for (var p : pedidos) {
+            System.out.println(p);
+        }
+    }
+
+
 }

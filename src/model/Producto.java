@@ -30,6 +30,10 @@ public class Producto {
         return stock;
     }
 
+    public void reducirStock(int cantidad) {
+        this.stock = this.stock - cantidad;
+    }
+
     @Override
     public String toString() {
         return "Producto{id=" + id +
