@@ -148,7 +148,7 @@ public class ConsolaView {
         }
     }
 
-    // PEDIDOS
+    // PEDIDOS.
 
     private void menuPedidos() {
         System.out.println("\n--- Menú Pedidos ---");
