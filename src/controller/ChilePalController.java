@@ -1,29 +1,87 @@
 package controller;
 
-import model.Cliente;
-import model.Producto;
-import model.Pedido;
+import model.*;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChilePalController {
+public class ChilePalController implements Serializable {
 
-    private List<Cliente> clientes=new ArrayList<>();
-    private List<Producto> productos=new ArrayList<>();
+    private static final long serialVersionUID = 1L;
+
+    // ----------- LISTAS PRINCIPALES -----------
+    private List<Cliente> clientes = new ArrayList<>();
+    private List<Producto> productos = new ArrayList<>();
     private List<Pedido> pedidos = new ArrayList<>();
+    private List<OrdenDespacho> ordenesDespacho = new ArrayList<>();
+    private List<Pago> pagos = new ArrayList<>();
+    private List<Repartidor> repartidores = new ArrayList<>();
 
-
-    private int nextIdCliente=1;
-    private int nextIdProducto=1;
+    // ----------- CONTADORES -----------
+    private int nextIdCliente = 1;
+    private int nextIdProducto = 1;
     private int nextIdPedido = 1;
+    private int nextIdOrdenDespacho = 1;
+    private int nextIdPago = 1;
+    private int nextIdRepartidor = 1;
 
-    public ChilePalController(){
+    // ----------- CONSTRUCTOR -----------
+    public ChilePalController() {
+        repartidores.add(new Repartidor(nextIdRepartidor++, "Repartidor 1"));
     }
 
-    // ---------- CLIENTES ----------
+    // =======================================================
+    //                PERSISTENCIA BINARIA
+    // =======================================================
+
+    public static ChilePalController cargarDesdeArchivo(String ruta) {
+        File archivo = new File(ruta);
+
+        if (!archivo.exists()) {
+            ChilePalController c = new ChilePalController();
+            c.cargarDatosIniciales();
+            return c;
+        }
+
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
+            System.out.println("Datos cargados desde archivo.");
+            return (ChilePalController) ois.readObject();
+        } catch (Exception e) {
+            System.out.println("ERROR al cargar archivo. Se iniciará vacío.");
+            return new ChilePalController();
+        }
+    }
+
+    public void guardarEnArchivo(String ruta) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ruta))) {
+            oos.writeObject(this);
+            System.out.println("Datos guardados correctamente.");
+        } catch (IOException e) {
+            System.out.println("ERROR al guardar datos.");
+        }
+    }
+
+    // =======================================================
+    //         DATOS INICIALES
+    // =======================================================
+
+    private void cargarDatosIniciales() {
+
+        registrarProducto("Palta Ester (kg)", 3000, 50);
+        registrarProducto("Palta Negra de la Cruz (kg)", 2500, 20);
+        registrarProducto("Palta California (kg)", 4500, 15);
+        registrarProducto("Palta Hass (kg)", 3600, 100);
+
+        System.out.println("Datos iniciales cargados correctamente.");
+    }
+
+    // =======================================================
+    //                 CLIENTES
+    // =======================================================
+
     public Cliente registrarCliente(String nombre, String rut, String telefono, String direccion) {
-        Cliente c=new Cliente(nextIdCliente++,nombre,rut,telefono,direccion);
+        Cliente c = new Cliente(nextIdCliente++, nombre, rut, telefono, direccion);
         clientes.add(c);
         return c;
     }
@@ -32,24 +90,30 @@ public class ChilePalController {
         return clientes;
     }
 
-    // ---------- PRODUCTOS ----------
+
+    // =======================================================
+    //                 PRODUCTOS
+    // =======================================================
+
     public Producto registrarProducto(String nombre, int precioNeto, int stock) {
-        Producto p=new Producto(nextIdProducto++,nombre,precioNeto,stock);
+        Producto p = new Producto(nextIdProducto++, nombre, precioNeto, stock);
         productos.add(p);
         return p;
     }
-
 
     public List<Producto> obtenerProductos() {
         return productos;
     }
 
-    // ---------- PEDIDOS ----------
+
+    // =======================================================
+    //                 PEDIDOS
+    // =======================================================
 
     public Pedido registrarPedido(Cliente cliente, Producto producto, int cantidad) {
-        if (producto.getStock() < cantidad) {
-            return null;
-        }
+        if (cantidad <= 0) return null;
+        if (producto.getStock() < cantidad) return null;
+
         producto.reducirStock(cantidad);
 
         Pedido pedido = new Pedido(nextIdPedido++, cliente, producto, cantidad);
@@ -60,20 +124,96 @@ public class ChilePalController {
     public List<Pedido> obtenerPedidos() {
         return pedidos;
     }
-    public Cliente buscarClientePorId(int id) {
-        for (Cliente c : clientes) {
-            if (c.getId() == id) {
-                return c;
-            }
+
+    private Pedido buscarPedidoPorId(int idPedido) {
+        for (Pedido p : pedidos) {
+            if (p.getId() == idPedido) return p;
         }
         return null;
     }
-    public Producto buscarProductoPorId(int id) {
-        for (Producto p : productos) {
-            if (p.getId() == id) {
-                return p;
-            }
+
+    // =======================================================
+    //               ORDEN DE DESPACHO
+    // =======================================================
+
+    public OrdenDespacho generarOrdenDespacho(int idPedido) {
+        Pedido pedido = buscarPedidoPorId(idPedido);
+        if (pedido == null) return null;
+
+        if (pedido.getEstado() != EstadoPedido.REGISTRADO) return null;
+
+        pedido.setEstado(EstadoPedido.DESPACHADO);
+
+        OrdenDespacho orden = new OrdenDespacho(nextIdOrdenDespacho++, pedido);
+        ordenesDespacho.add(orden);
+        return orden;
+    }
+
+    public List<OrdenDespacho> obtenerOrdenesDespacho() {
+        return ordenesDespacho;
+    }
+
+    public OrdenDespacho buscarOrdenPorId(int idOrden) {
+        for (OrdenDespacho o : ordenesDespacho) {
+            if (o.getId() == idOrden) return o;
         }
         return null;
+    }
+
+    // =======================================================
+    //                 ENTREGA
+    // =======================================================
+
+    public List<Repartidor> obtenerRepartidores() {
+        return repartidores;
+    }
+
+    public boolean registrarEntrega(int idOrden, int idRepartidor) {
+        OrdenDespacho orden = buscarOrdenPorId(idOrden);
+        if (orden == null) return false;
+
+        Pedido pedido = orden.getPedido();
+
+        if (pedido.getEstado() != EstadoPedido.DESPACHADO) return false;
+
+        Repartidor rep = null;
+        for (Repartidor r : repartidores) {
+            if (r.getId() == idRepartidor)
+                rep = r;
+        }
+        if (rep == null) return false;
+
+        rep.entregarPedido(orden);
+        pedido.setEstado(EstadoPedido.ENTREGADO);
+
+        return true;
+    }
+
+    // =======================================================
+    //                 PAGOS
+    // =======================================================
+
+    public Pago registrarPago(int idPedido) {
+        Pedido pedido = buscarPedidoPorId(idPedido);
+        if (pedido == null) return null;
+
+        if (pedido.getEstado() == EstadoPedido.REGISTRADO ||
+                pedido.getEstado() == EstadoPedido.DESPACHADO)
+            return null;
+
+        if (pedido.getEstado() == EstadoPedido.PAGADO)
+            return null;
+
+        Pago pago = new Pago(nextIdPago++, pedido, pedido.getTotal());
+        pago.marcarComoPagado();
+        pagos.add(pago);
+
+        pedido.setEstado(EstadoPedido.PAGADO);
+
+        return pago;
+    }
+
+    public List<Pago> obtenerPagos() {
+        return pagos;
     }
 }
